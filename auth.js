@@ -11,15 +11,23 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ---------- Messages d'erreur lisibles (KOTO peut les prononcer) ----------
 function messageErreur(e) {
   const m = (e && (e.message || "")).toLowerCase();
-  if (m.includes("already registered") || m.includes("already been registered"))
+  const c = (e && e.code) || "";
+  if (m.includes("already registered") || m.includes("already been registered") || c === "user_already_exists")
     return "Cet e-mail a déjà un compte. Essaie de te connecter.";
   if (m.includes("invalid login credentials")) return "E-mail ou mot de passe incorrect.";
   if (m.includes("email not confirmed"))       return "Confirme d'abord ton e-mail (regarde ta boîte de réception).";
   if (m.includes("password should be"))        return "Mot de passe trop faible (6 caractères minimum).";
   if (m.includes("invalid email") || m.includes("unable to validate email")) return "Cet e-mail n'est pas valide.";
-  if (m.includes("rate limit") || m.includes("too many")) return "Trop d'essais. Réessaie dans quelques minutes.";
+  if (c === "over_email_send_rate_limit" || m.includes("rate limit") || m.includes("too many"))
+    return "Trop d'e-mails envoyés ou d'essais. Réessaie dans quelques minutes.";
   if (m.includes("failed to fetch") || m.includes("network")) return "Pas de connexion internet.";
-  return "Une erreur est survenue. Réessaie.";
+  if (m.includes("error sending") && m.includes("email"))
+    return "Impossible d'envoyer l'e-mail de confirmation (SMTP non configuré ?).";
+  if (m.includes("database error"))            return "Erreur serveur à la création du profil (schema.sql exécuté ?).";
+  if (c === "signup_disabled" || m.includes("signups not allowed"))
+    return "Les inscriptions sont désactivées.";
+  // Dernier recours : on affiche la vraie cause au lieu de la cacher
+  return "Erreur : " + ((e && (e.code || e.message)) || "inconnue");
 }
 
 // Enveloppe : renvoie toujours { ok, ...données } ou { ok:false, error } — pas d'exception à gérer
@@ -107,21 +115,3 @@ export default IkoAuth;
 
 // Prévient index.js que l'auth est prête (le module se charge après les scripts normaux)
 window.dispatchEvent(new Event("ikoauth-ready"));
-
-/* ============ EXEMPLE D'UTILISATION DANS index.js ============
-window.addEventListener("ikoauth-ready", () => {
-  // 1) Réagir à l'état connecté / déconnecté
-  IkoAuth.surChangement((user) => {
-    btnInscription.textContent = user ? "Mon compte" : "S'inscrire";
-  });
-
-  // 2) Formulaire d'inscription
-  formInscription.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const r = await IkoAuth.inscrire(emailInput.value, mdpInput.value, nomInput.value, xpDemoActuel);
-    if (!r.ok)                 { /* KOTO prononce r.error */ }
-    else if (r.confirmationRequise) { /* KOTO : "Vérifie ton e-mail pour confirmer" */ }
-    else                       { /* KOTO : "Bienvenue !" */ }
-  });
-});
-================================================================ */
