@@ -632,3 +632,80 @@ $("simx").onclick=()=>{document.body.classList.remove("sim");$("sim").hidden=tru
 $("fi").onclick=()=>{seen("store");mStore()};$("fd").onclick=()=>{seen("demo");mPick()};
 $("lang").onclick=()=>lang(LG[(LG.indexOf(LANG)+1)%LG.length]);   // MG → CH → FR → EN → MG …
 lang(LANG);
+
+/* =====================================================================
+   COMPTE CONNECTÉ — photo de profil + « Mon compte » (Supabase via auth.js)
+   - Connecté : le bouton du haut affiche la photo Google (ou l'initiale) + le prénom.
+   - Clic sur ce bouton : fenêtre « Mon compte » (nom, e-mail, XP, déconnexion).
+   - Déconnecté : le bouton « S’inscrire » d’origine revient.
+   ===================================================================== */
+(function(){
+  let ACC=null,painting=0,OBS=null;
+  const btn=()=>$("reg");
+  const ORIG=btn()?btn().innerHTML:"";
+  const meta=u=>(u&&u.user_metadata)||{};
+  const accName=u=>String(meta(u).full_name||meta(u).name||meta(u).user_name||(u.email||"").split("@")[0]||"Joueur");
+  const accPic=u=>{const p=meta(u).avatar_url||meta(u).picture||"";return /^https:\/\//.test(p)?p:""};
+  const first=u=>accName(u).trim().split(/\s+/)[0].slice(0,14);
+  const avatar=(u,s)=>{
+    const p=accPic(u),ini=esc(accName(u).trim().charAt(0).toUpperCase()||"?");
+    return p
+      ?`<img class="av" src="${esc(p)}" alt="" referrerpolicy="no-referrer" style="width:${s}px;height:${s}px" onerror="this.outerHTML='<span class=&quot;av&quot; style=&quot;width:${s}px;height:${s}px&quot;>${ini}</span>'">`
+      :`<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*.5)}px">${ini}</span>`;
+  };
+
+  const st=document.createElement("style");
+  st.textContent="#reg .av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;background:#5e9bf7;color:#fff;font-weight:700;flex:none}"
+    +"#reg #regt{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+    +".alert .av{margin-right:10px}";
+  document.head.appendChild(st);
+
+  function paint(){
+    const el=btn();if(!el)return;
+    painting=1;if(OBS)OBS.disconnect();
+    if(ACC){
+      el.innerHTML=avatar(ACC,22)+'<span id="regt">'+esc(first(ACC))+'</span>';
+      el.setAttribute("aria-label",T4("Mon compte","Ny kaontiko","我的账号","My account"));
+    }else{
+      el.innerHTML=ORIG;
+      el.setAttribute("aria-label","S’inscrire");
+      try{applySite()}catch(e){}
+    }
+    if(OBS)OBS.observe(el,{childList:true,subtree:true,characterData:true});
+    painting=0;
+  }
+  /* si le site retraduit le bouton (changement de langue), on remet la photo */
+  OBS=new MutationObserver(()=>{if(!painting&&ACC)paint()});
+
+  async function logout(){
+    if(window.IkoAuth)await IkoAuth.deconnecter();
+    mShut();
+  }
+  async function mAccount(){
+    if(!ACC)return;
+    const u=ACC,nraw=accName(u);
+    MR=()=>mAccount();mOpen();
+    mSay(()=>T4(`Salut ${nraw} ! 👋 Voici ton compte IKOIZANA.`,`Salama ${nraw}! 👋 Ity ny kaontinao IKOIZANA.`,`你好 ${nraw}！👋 这是你的 IKOIZANA 账号。`,`Hi ${nraw}! 👋 Here is your IKOIZANA account.`));
+    MB.innerHTML=`<div class="alert">${avatar(u,48)}<div><b>${esc(nraw)}</b><br>${esc(u.email||"")}<br>⚡ <span id="accxp">…</span> XP</div></div>`;
+    mBtns([[T4("Se déconnecter","Hiala","退出登录","Log out"),logout,"btn ghost"]],true);
+    if(window.IkoAuth){
+      const r=await IkoAuth.lireProfil(),x=$("accxp");
+      if(x)x.textContent=(r&&r.ok&&r.profil)?r.profil.xp:"—";
+    }
+  }
+
+  /* Connecté : « S’inscrire » ouvre « Mon compte » (bouton du haut + autres appels à mReg) */
+  const _mReg=mReg;
+  mReg=function(){return ACC?mAccount():_mReg.apply(this,arguments)};
+  ACT.reg=function(){return ACC?mAccount():mReg.apply(this,arguments)};
+
+  function init(){
+    IkoAuth.surChangement(u=>{
+      ACC=u||null;
+      try{REG=ACC?1:0}catch(e){}
+      paint();
+    });
+  }
+  if(window.IkoAuth)init();
+  else window.addEventListener("ikoauth-ready",init,{once:true});
+})();
