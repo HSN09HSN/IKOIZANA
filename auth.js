@@ -103,6 +103,14 @@ const IkoAuth = {
     return {};
   }),
 
+  // Classement réel (prénom, photo, XP) — voir multijoueur.sql
+  classement: (n = 30) => run(async () => ({ lignes: ouvert(await supabase.rpc("leaderboard", { top_n: n })) })),
+  // Enregistre le nom et la photo du compte dans profiles
+  synchroProfil: (nom, photo) => run(async () => {
+    ouvert(await supabase.rpc("sync_profile", { p_name: nom || "", p_avatar: photo || "" }));
+    return {};
+  }),
+
   // { name, xp, created_at } du joueur connecté
   lireProfil: () => run(async () => {
     const u = (await supabase.auth.getUser()).data.user;
