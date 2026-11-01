@@ -6,6 +6,17 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase-config.js";
 
+// ---------- Une seule adresse pour tout le monde ----------
+// La connexion Google se termine sur l'adresse où elle a commencé. Si des visiteurs arrivent par
+// une autre adresse Vercel (ex. ikoizana-hasinirina-s-projects.vercel.app), l'état OAuth se perd
+// (erreur bad_oauth_state). On les ramène donc toujours sur l'adresse officielle.
+const ADRESSE_OFFICIELLE = "ikoizana-chi.vercel.app";
+if (location.hostname.endsWith(".vercel.app") && location.hostname !== ADRESSE_OFFICIELLE) {
+  location.replace("https://" + ADRESSE_OFFICIELLE + location.pathname + location.search + location.hash);
+}
+// Navigateur intégré (Facebook, Messenger, Instagram, TikTok, WebView) : Google et le stockage y échouent
+const NAVIGATEUR_INTEGRE = /FBAN|FBAV|FB_IAB|Instagram|Messenger|TikTok|MicroMessenger|; wv\)/i.test(navigator.userAgent);
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---------- Messages d'erreur lisibles (KOTO peut les prononcer) ----------
@@ -60,7 +71,9 @@ const IkoAuth = {
 
   // Connexion Google (redirection). Active "Google" dans Authentication → Providers.
   // L'XP de la démo est gardé en local le temps de la redirection puis réclamé au retour.
-  connecterGoogle: (xpDemo = 0) => run(async () => {
+  connecterGoogle: (xpDemo = 0) => NAVIGATEUR_INTEGRE
+    ? Promise.resolve({ ok: false, error: "Pour te connecter avec Google, ouvre ce site dans Chrome ou Safari (le navigateur intégré de Facebook, WhatsApp ou Messenger ne le permet pas)." })
+    : run(async () => {
     try { localStorage.setItem("iko_xp_demo", String(Math.max(0, Math.floor(xpDemo)))); } catch (_) {}
     ouvert(await supabase.auth.signInWithOAuth({
       provider: "google",
