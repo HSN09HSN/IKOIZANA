@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="nuit">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IKOIZANA – Apprends en jouant</title>
+<meta name="description" content="IKOIZANA : l’application de quiz pour renforcer ta culture générale. Créée à Madagascar, pour le monde entier.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="sim">
+<div class="sky far" id="skyFar" aria-hidden="true"></div>
+<div class="sky near" id="skyNear" aria-hidden="true"></div>
+
+<div class="weather" id="wx" aria-hidden="true"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="panel"><button class="x" id="mx" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button><div class="mrow"><div class="lemur"></div><p class="bubble" id="mb"></p></div><div class="answers" id="mbody"></div><div class="mfoot"><button class="btn" id="fi"><i class="fa-solid fa-download"></i><span id="fit">Installer l’app</span></button><button class="btn ghost" id="fd"><i class="fa-solid fa-gamepad"></i><span id="fdt">Jouer à la démo</span></button></div></div></div>
+<div class="radio" id="radio"><button id="rp" aria-label="Lecture / pause"><i class="fa-solid fa-play"></i></button><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="rl">Radio 80’s</span><span id="ri"><i class="fa-solid fa-volume-high"></i></span><input type="range" id="rv" min="0" max="100" value="40" aria-label="Volume"></div>
+<header>
+  <a class="logo" href="#"><i class="fa-solid fa-star"></i>IKO<b>IZANA</b></a>
+  <div class="hr"><button id="lang" type="button" aria-label="Changer de langue" title="Changer de langue"><i class="fa-solid fa-globe"></i><b id="lgt">FR</b></button><span id="xpbox" title="XP accumulé"><i class="fa-solid fa-bolt"></i><b id="xpv">0</b> XP</span><button id="reg" data-act="reg" aria-label="S’inscrire"><i class="fa-solid fa-user-plus"></i><span id="regt">S’inscrire</span></button><button id="theme" aria-label="Changer de mode"><span id="ticon"><i class="fa-solid fa-moon"></i></span><em id="tname">Nuit</em></button></div>
+</header>
+
+<main id="deck">
+  <!-- 1 -->
+  <section class="slide active hero" data-t="Accueil">
+    <div class="row">
+      <div class="lemur"></div>
+      <div class="bubbles">
+        <p class="bubble say" data-say="Bonjour ! 👋 Bienvenue sur le site officiel d’IKOIZANA !"></p>
+        <p class="bubble say" data-say="Moi c’est KOTO, ton guide pendant cette visite."></p>
+        <p class="bubble say" data-say="Dis-moi : est-ce que tu m’as déjà entendu quelque part ?"></p>
+        <div class="choices" id="choices" hidden>
+          <button class="btn yes" data-r="Génial, content de te revoir ! 🎉 Il y a du nouveau, suis-moi.">Oui</button>
+          <button class="btn no" data-r="Pas de souci, enchanté ! 🤝 Je te montre tout depuis le début.">Non</button>
+          <button class="btn ghost" data-r="Haha, alors je vais parler plus fort ! 📢 Clique sur Suivant.">Oui mais pas très bien</button>
+          <button class="btn" data-keep data-r="Moi, c’est KOTO ! 🐒 Un lémurien curieux de Madagascar et le guide d’IKOIZANA. Je pose les questions, je te félicite quand tu brilles… et je te gronde (gentiment) quand il faut réviser. Ma mission : te faire aimer apprendre !"><i class="fa-solid fa-circle-question"></i>Qui es-tu, KOTO ?</button>
+          <button class="btn ghost" data-act="card">🪪 Montre-moi ta carte pro</button>
+        </div>
+        <p class="bubble me" id="mine"></p>
+        <p class="bubble" id="kotoR"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-t="L’app">
+    <div class="row item"><div class="lemur"></div><p class="bubble say" data-say="IKOIZANA, c’est l’app pour apprendre et renforcer ta culture générale, gamifiée en QUIZ pour que tu t’épanouisses. 🚀"></p></div>
+    <div class="hscroll item">
+      <article class="card"><span class="ico"><i class="fa-solid fa-book-open-reader"></i></span><h3>Curieux ?</h3><p>Des notions expliquées, des mystères révélés, des réponses pour prendre de l’avance.</p></article>
+      <article class="card"><span class="ico"><i class="fa-solid fa-bullseye"></i></span><h3>Tester ton niveau ?</h3><p>Des quiz en catégories et sous-catégories. Une ligue d’environ 50 joueurs, classement mensuel.</p></article>
+      <article class="card"><span class="ico"><i class="fa-solid fa-trophy"></i></span><h3>Compétiteur ?</h3><p>Classement de tous les temps, défis quotidiens, plusieurs modes de jeu. Même en apprenant !</p></article>
+      <article class="card"><span class="ico"><i class="fa-solid fa-medal"></i></span><h3>Mérites</h3><p>Des récompenses tout au long de ton parcours.</p></article>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-t="Essayer">
+    <div class="row item"><div class="lemur"></div><p class="bubble say" data-say="Un petit avant-goût ? Réponds, je suis sûr que tu connais. 😉"></p></div>
+    <div class="quiz item">
+      <div class="tbar"><i id="mtb"></i></div><h3 id="q"></h3><div class="answers" id="a"></div><p class="fb" id="fb"></p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-t="Catégories">
+    <div class="row item"><div class="lemur"></div><p class="bubble say" data-say="Voici les catégories. Fais défiler les cartes ! 👉"></p></div>
+    <div class="hscroll item">
+      <div class="cat"><img src="IMG/philosophie.png" alt="" data-fa="fa-book-open"><h4>Philosophie</h4><p>Trouve l’intrus, le vrai citateur, la pensée ancienne et récente.</p></div>
+      <div class="cat"><img src="IMG/reflexion_logique.png" alt="" data-fa="fa-calculator"><h4>Logique</h4><p>Calculs, formules scientifiques : trouve la bonne réponse.</p></div>
+      <div class="cat"><img src="IMG/art.jpg" alt="" data-fa="fa-palette"><h4>Art</h4><p>Artistes, créateurs, fondateurs et vraies œuvres.</p></div>
+      <div class="cat"><img src="IMG/nature.jpg" alt="" data-fa="fa-leaf"><h4>Nature</h4><p>Faune, flore, espèces rares et endémiques.</p></div>
+      <div class="cat"><img src="IMG/geographie.jpg" alt="" data-fa="fa-earth-africa"><h4>Géographie</h4><p>Pays, capitales, population, monnaies, lieux iconiques.</p></div>
+      <div class="cat"><img src="IMG/sport.png" alt="" data-fa="fa-futbol"><h4>Sport</h4><p>Légendes, lieux de tournois, records emblématiques.</p></div>
+      <div class="cat"><img src="IMG/histoire.png" alt="" data-fa="fa-landmark"><h4>Histoire</h4><p>Dates, lieux et événements qui ont marqué l’humanité.</p></div>
+      <div class="cat"><img src="IMG/culture_musique.png" alt="" data-fa="fa-masks-theater"><h4>Culture</h4><p>Culture locale et universelle, ancienne et actuelle.</p></div>
+      <div class="cat mada"><img src="IMG/monde_madagascar.png" alt="" data-fa="fa-location-dot"><h4>Madagascar</h4><p>Ton île, ton histoire, ta culture, mises en valeur en premier.</p></div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-t="Madagascar">
+    <div class="row item">
+      <div class="lemur"></div>
+      <div class="bubbles">
+        <p class="bubble say" data-say="IKOIZANA est née à Madagascar, créée par HASINIRINA Andrianarivo, et diffusée au monde entier. 🌍"></p>
+        <p class="bubble say" data-say="Nous mettons Madagascar à l’honneur en premier, sans jamais rabaisser les valeurs des autres pays. 💙"></p>
+      </div>
+    </div>
+    <div class="chips item"><span class="chip"><i class="fa-solid fa-heart"></i>Fait à Madagascar</span><span class="chip"><i class="fa-solid fa-globe"></i>Pour le monde entier</span><span class="chip"><i class="fa-solid fa-star"></i>Expériences inoubliables</span></div>
+  </section>
+
+  <section class="slide" data-t="Soutien">
+    <div class="row item"><div class="lemur"></div>
+      <div class="bubbles">
+        <p class="bubble say" data-say="La connaissance est le seul trésor qui grandit quand on le partage. 🌍"></p>
+        <p class="bubble say" data-say="Chaque personne qui apprend, c’est un esprit plus ouvert, plus curieux… et une humanité un peu plus unie. Tu peux faire partie de ça. 💙"></p>
+        <p class="bubble say" data-say="IKOIZANA grandit grâce à toi : un partage, un abonnement ou un don, tout compte. Tu nous soutiens ?"></p>
+      </div></div>
+    <div class="answers item" style="max-width:520px">
+      <button class="btn" data-act="share"><i class="fa-solid fa-share-nodes"></i>Partager IKOIZANA</button>
+      <button class="btn ghost" data-act="why"><i class="fa-solid fa-earth-africa"></i>Pourquoi ça compte ?</button>
+      <button class="btn ghost" data-act="contact"><i class="fa-solid fa-heart"></i>Nous suivre sur les réseaux</button>
+      <a class="btn ghost" data-net="don" target="_blank" rel="noopener"><i class="fa-solid fa-hand-holding-heart"></i>Soutenir le projet</a>
+      <p class="fb" id="sfb"></p>
+    </div>
+  </section>
+
+  <section class="slide" data-t="Télécharger">
+    <div class="row item"><div class="lemur"></div><p class="bubble say" data-say="Prêt à jouer pour de vrai ? 🚀 Installe l’app sur ton téléphone, ou essaie la démo tout de suite !"></p></div>
+    <div class="answers item" style="max-width:520px">
+      <a class="btn" data-net="play" target="_blank" rel="noopener"><i class="fa-brands fa-google-play"></i>Google Play</a>
+      <a class="btn" data-net="apple" target="_blank" rel="noopener"><i class="fa-brands fa-app-store-ios"></i>App Store</a>
+      <button class="btn ghost" data-act="demo"><i class="fa-solid fa-gamepad"></i>Jouer à la démo</button>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-t="Contact">
+    <div class="row item"><div class="lemur"></div><p class="bubble say" data-say="Restons en contact ! Écris-nous directement ici, ou retrouve-nous ailleurs ! ✉️"></p></div>
+    <form class="form item" id="mail" autocomplete="off">
+      <input id="nm" placeholder="Ton nom" maxlength="60" aria-label="Ton nom">
+      <textarea id="msg" rows="3" placeholder="Écris ton message ici…" required aria-label="Ton message"></textarea>
+      <button class="btn" type="submit"><i class="fa-solid fa-paper-plane"></i>Envoyer par mail</button>
+      <p class="fb" id="mfb"></p>
+    </form>
+    <button class="btn ghost item" data-act="review">⭐ Laisser un avis (5 étoiles)</button>
+    <div class="socials item">
+      <a class="soc" data-net="facebook" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      <a class="soc" data-net="youtube" target="_blank" rel="noopener" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+      <a class="soc" data-net="whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a class="soc" data-net="discord" target="_blank" rel="noopener" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
+          </div>
+  </section>
+</main>
+
+<div id="sim"><span id="simt"></span><button id="simx" aria-label="Fermer">✕</button></div>
+<footer>
+  <button class="nav prev" id="prev" aria-label="Précédent"><i class="fa-solid fa-chevron-left"></i><span id="tp">Précédent</span></button>
+  <div id="dots"></div>
+  <button class="nav" id="next" aria-label="Suivant"><span id="tn">Suivant</span><i class="fa-solid fa-chevron-right"></i></button>
+</footer>
+
+<script src="index.js"></script>
+<script type="module" src="auth.js"></script>
+</body>
+</html>

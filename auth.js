@@ -1,0 +1,127 @@
+// ============================================================
+// auth.js — Authentification réelle IKOIZANA (Supabase Auth + table profiles)
+// Chargé avec : <script type="module" src="auth.js"></script>
+// Expose window.IkoAuth pour que ton index.js (non-module) puisse l'utiliser.
+// ============================================================
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase-config.js";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------- Messages d'erreur lisibles (KOTO peut les prononcer) ----------
+function messageErreur(e) {
+  const m = (e && (e.message || "")).toLowerCase();
+  if (m.includes("already registered") || m.includes("already been registered"))
+    return "Cet e-mail a déjà un compte. Essaie de te connecter.";
+  if (m.includes("invalid login credentials")) return "E-mail ou mot de passe incorrect.";
+  if (m.includes("email not confirmed"))       return "Confirme d'abord ton e-mail (regarde ta boîte de réception).";
+  if (m.includes("password should be"))        return "Mot de passe trop faible (6 caractères minimum).";
+  if (m.includes("invalid email") || m.includes("unable to validate email")) return "Cet e-mail n'est pas valide.";
+  if (m.includes("rate limit") || m.includes("too many")) return "Trop d'essais. Réessaie dans quelques minutes.";
+  if (m.includes("failed to fetch") || m.includes("network")) return "Pas de connexion internet.";
+  return "Une erreur est survenue. Réessaie.";
+}
+
+// Enveloppe : renvoie toujours { ok, ...données } ou { ok:false, error } — pas d'exception à gérer
+async function run(fn) {
+  try { return { ok: true, ...(await fn()) }; }
+  catch (e) { console.error(e); return { ok: false, error: messageErreur(e) }; }
+}
+const ouvert = (r) => { if (r.error) throw r.error; return r.data; };
+
+// ---------- API publique ----------
+const IkoAuth = {
+  // Inscription e-mail + mot de passe.
+  // nom = facultatif ; xpDemo = XP gagné dans la démo (plafonné à 1000 côté base).
+  inscrire: (email, motDePasse, nom = "", xpDemo = 0) => run(async () => {
+    const d = ouvert(await supabase.auth.signUp({
+      email, password: motDePasse,
+      options: {
+        data: { name: nom, xp_demo: Math.max(0, Math.floor(xpDemo)) },
+        emailRedirectTo: window.location.origin
+      }
+    }));
+    // Si la confirmation e-mail est activée (par défaut), il n'y a pas encore de session.
+    return { user: d.user, confirmationRequise: !d.session };
+  }),
+
+  connecter: (email, motDePasse) => run(async () => {
+    const d = ouvert(await supabase.auth.signInWithPassword({ email, password: motDePasse }));
+    return { user: d.user };
+  }),
+
+  // Connexion Google (redirection). Active "Google" dans Authentication → Providers.
+  // L'XP de la démo est gardé en local le temps de la redirection puis réclamé au retour.
+  connecterGoogle: (xpDemo = 0) => run(async () => {
+    try { localStorage.setItem("iko_xp_demo", String(Math.max(0, Math.floor(xpDemo)))); } catch (_) {}
+    ouvert(await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin }
+    }));
+    return {};
+  }),
+
+  motDePasseOublie: (email) => run(async () => {
+    ouvert(await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }));
+    return {};
+  }),
+
+  deconnecter: () => run(async () => { ouvert(await supabase.auth.signOut()); return {}; }),
+
+  // callback(user | null) : appelé au chargement puis à chaque connexion / déconnexion.
+  surChangement: (callback) => {
+    supabase.auth.getSession().then(({ data }) => callback(data.session ? data.session.user : null));
+    return supabase.auth.onAuthStateChange((_evt, session) => callback(session ? session.user : null));
+  },
+
+  utilisateur: async () => (await supabase.auth.getUser()).data.user,
+
+  // +n XP (1 à 200 par appel, vérifié côté base).
+  ajouterXp: (n) => run(async () => {
+    ouvert(await supabase.rpc("add_xp", { amount: Math.floor(n) }));
+    return {};
+  }),
+
+  // { name, xp, created_at } du joueur connecté
+  lireProfil: () => run(async () => {
+    const u = (await supabase.auth.getUser()).data.user;
+    if (!u) throw new Error("Non connecté");
+    const d = ouvert(await supabase.from("profiles").select("name, xp, created_at").eq("id", u.id).single());
+    return { profil: d };
+  })
+};
+
+// Après un retour de connexion Google : réclame l'XP de la démo (une seule fois).
+supabase.auth.onAuthStateChange(async (evt, session) => {
+  if (evt !== "SIGNED_IN" || !session) return;
+  let xp = 0;
+  try { xp = parseInt(localStorage.getItem("iko_xp_demo") || "0", 10) || 0; } catch (_) {}
+  if (xp > 0) {
+    await supabase.rpc("claim_demo_xp", { amount: xp });
+    try { localStorage.removeItem("iko_xp_demo"); } catch (_) {}
+  }
+});
+
+window.IkoAuth = IkoAuth;
+export default IkoAuth;
+
+// Prévient index.js que l'auth est prête (le module se charge après les scripts normaux)
+window.dispatchEvent(new Event("ikoauth-ready"));
+
+/* ============ EXEMPLE D'UTILISATION DANS index.js ============
+window.addEventListener("ikoauth-ready", () => {
+  // 1) Réagir à l'état connecté / déconnecté
+  IkoAuth.surChangement((user) => {
+    btnInscription.textContent = user ? "Mon compte" : "S'inscrire";
+  });
+
+  // 2) Formulaire d'inscription
+  formInscription.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const r = await IkoAuth.inscrire(emailInput.value, mdpInput.value, nomInput.value, xpDemoActuel);
+    if (!r.ok)                 { /* KOTO prononce r.error */ }
+    else if (r.confirmationRequise) { /* KOTO : "Vérifie ton e-mail pour confirmer" */ }
+    else                       { /* KOTO : "Bienvenue !" */ }
+  });
+});
+================================================================ */
