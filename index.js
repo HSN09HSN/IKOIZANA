@@ -644,7 +644,7 @@ lang(LANG);
   const btn=()=>$("reg");
   const ORIG=btn()?btn().innerHTML:"";
   const meta=u=>(u&&u.user_metadata)||{};
-  const accName=u=>String(meta(u).full_name||meta(u).name||meta(u).user_name||(u.email||"").split("@")[0]||"Joueur");
+  const accName=u=>String(meta(u).full_name||meta(u).name||meta(u).user_name||(u.email||"").split("@")[0]||"Joueur").replace(/[<>&"]/g,"");
   const accPic=u=>{const p=meta(u).avatar_url||meta(u).picture||"";return /^https:\/\//.test(p)?p:""};
   const first=u=>accName(u).trim().split(/\s+/)[0].slice(0,14);
   const avatar=(u,s)=>{
@@ -708,4 +708,102 @@ lang(LANG);
   }
   if(window.IkoAuth)init();
   else window.addEventListener("ikoauth-ready",init,{once:true});
+})();
+
+/* =====================================================================
+   🧠 CERVEAU DU CLASSEMENT — des messages de KOTO vivants, pas robotiques
+   - Il lit ta vraie situation (rang, écart avec le joueur devant, progression en direct)
+     et choisit une phrase adaptée, jamais deux fois la même d'affilée.
+   - Aucune pression : pas de « installe l'app avant X jours ». KOTO invite à garder le lien
+     pour suivre l'évolution du classement et à suivre la page Facebook.
+   - Ta photo de profil Google remplace l'avatar KOTO sur TA ligne du classement.
+   - Pour modifier un texte : change-le dans MSG (ordre : FR, MG, ZH, EN).
+     {n}=prénom {r}=rang {t}=nb de joueurs {g}=écart en XP {x}=joueur voisin {d}=places gagnées
+   ===================================================================== */
+(function(){
+  const MSG={
+    start:[
+      ["Bienvenue dans la ligue, {n} ! Tu démarres à la {r}ᵉ place sur {t}. Une seule partie suffit pour décoller. 🚀","Tonga soa eto amin’ny ligy, {n}! Laharana {r} amin’ny {t} ianao izao. Lalao iray ihany dia mitsangana ianao. 🚀","欢迎加入联赛，{n}！你现在排第{r}名（共{t}人）。只要玩一局就能起飞。🚀","Welcome to the league, {n}! You start at #{r} of {t}. One round is all it takes to take off. 🚀"],
+      ["{n}, la ligue t’attend ! Pour l’instant {r}ᵉ sur {t} : ta première partie va tout changer.","{n}, miandry anao ny ligy! Laharana {r} amin’ny {t} izao: hanova ny zava-drehetra ny lalao voalohany.","{n}，联赛在等你！目前第{r}名（共{t}人）：第一局就会改变一切。","{n}, the league is waiting! #{r} of {t} for now: your first round will change everything."]],
+    lead:[
+      ["Tu mènes la ligue, {n} ! 👑 {g} XP d’avance sur {x}. À toi de défendre ta place.","Ianao no mitarika ny ligy, {n}! 👑 {g} XP mialoha an’i {x}. Arovy ny toerana.","{n}，你领跑联赛！👑 领先{x}共{g} XP。守住你的位置吧。","You lead the league, {n}! 👑 {g} XP ahead of {x}. Time to defend your spot."],
+      ["Numéro 1, rien que ça ! 👑 {x} te suit à {g} XP : reste concentré, {n}.","Laharana voalohany! 👑 Manaraka anao i {x}, {g} XP monja: mitaova, {n}.","第一名！👑 {x}只落后你{g} XP：保持专注，{n}。","Number 1, no less! 👑 {x} is {g} XP behind: stay sharp, {n}."]],
+    podium:[
+      ["Sur le podium, {n} ! {r}ᵉ place, à {g} XP de {x}. La première marche est possible. 🥇","Eo amin’ny podium ianao, {n}! Laharana {r}, {g} XP miala amin’i {x}. Azo atao ny laharana voalohany. 🥇","{n}，你登上领奖台了！第{r}名，距{x}还差{g} XP。冠军并非遥不可及。🥇","On the podium, {n}! #{r}, {g} XP from {x}. The top step is within reach. 🥇"]],
+    up:[
+      ["Belle remontée, {n} ! Tu viens de doubler {d} joueur(s) et te voilà {r}ᵉ. 🔥","Hiakatra tsara, {n}! Nandalo mpilalao {d} ianao, ary laharana {r} ianao izao. 🔥","漂亮的反超，{n}！你超过了{d}位玩家，现在第{r}名。🔥","Great climb, {n}! You just passed {d} player(s) and you’re now #{r}. 🔥"],
+      ["{n} grimpe au classement : {r}ᵉ ! Continue sur cette lancée.","Miakatra eo amin’ny laharana i {n}: laharana {r}! Tohizo ity hafainganana ity.","{n}在排名中不断上升：第{r}名！保持这个势头。","{n} is climbing: #{r}! Keep that momentum going."]],
+    down:[
+      ["Le classement bouge vite, {n} : tu es {r}ᵉ pour l’instant. Une bonne série et tu reprends ta place. 💪","Mihetsika haingana ny laharana, {n}: laharana {r} ianao izao. Andiany tsara iray dia mahazo ny toerana indray ianao. 💪","排名变化很快，{n}：你目前第{r}名。再来一轮好成绩就能夺回位置。💪","The ranking moves fast, {n}: you’re #{r} right now. One good streak and you’re back. 💪"],
+      ["Les autres ont accéléré, mais rien n’est joué : {r}ᵉ sur {t}, à {g} XP de {x}.","Nanafingana ny hafa, nefa mbola tsy lany ny lalao: laharana {r} amin’ny {t}, {g} XP miala amin’i {x}.","其他人加速了，但胜负未定：第{r}名（共{t}人），距{x}还差{g} XP。","The others sped up, but nothing is settled: #{r} of {t}, {g} XP behind {x}."]],
+    close:[
+      ["Plus que {g} XP pour doubler {x}, {n} ! Une bonne réponse et c’est fait. 🎯","{g} XP sisa dia mialoha an’i {x} ianao, {n}! Valiny marina iray dia vita. 🎯","只差{g} XP就能超过{x}了，{n}！答对一题就行。🎯","Only {g} XP to overtake {x}, {n}! One right answer and it’s done. 🎯"],
+      ["{x} est à portée de main : {g} XP seulement. Tu le sens venir, {n} ?","Eo akaikin’ny tananao i {x}: {g} XP ihany. Mahatsapa ve ianao, {n}?","{x}近在咫尺：只差{g} XP。{n}，你感觉到了吗？","{x} is within reach: just {g} XP. Can you feel it coming, {n}?"]],
+    hold:[
+      ["Tu tiens la {r}ᵉ place sur {t}, {n}. Il te manque {g} XP pour passer devant {x}.","Mitazona ny laharana {r} amin’ny {t} ianao, {n}. Mbola {g} XP no ilaina hialoha an’i {x}.","{n}，你稳居第{r}名（共{t}人）。再拿{g} XP就能超过{x}。","You’re holding #{r} of {t}, {n}. Just {g} XP more to pass {x}."],
+      ["{r}ᵉ sur {t} : solide, {n}. {x} est juste devant toi, à {g} XP.","Laharana {r} amin’ny {t}: mafy, {n}. Eo alohanao i {x}, {g} XP monja.","第{r}名（共{t}人）：很稳，{n}。{x}就在你前面，仅差{g} XP。","#{r} of {t}: solid, {n}. {x} is right ahead of you, {g} XP away."]]
+  };
+  /* Phrases de fin : invitation douce, jamais de menace ni de compte à rebours */
+  const KEEP=["Ce classement évolue en direct (démo) : garde ce lien pour suivre son évolution quand tu veux.","Miova mivantana ity laharana ity (fanandramana): tehirizo ity rohy ity mba hanaraka ny fivoarany amin’ny fotoana rehetra.","这个排名会实时变化（演示）：留好这个链接，随时来看它的变化。","This ranking moves live (demo): keep this link to follow how it evolves whenever you like."];
+  const FB=["Et pour ne rien rater des classements et des nouveautés, suis la page Facebook. 💙","Ary mba tsy hisy ho very amin’ny laharana sy ny vaovao, araho ny pejy Facebook. 💙","想不错过排名和新动态，欢迎关注 Facebook 主页。💙","And to never miss rankings and news, follow the Facebook page. 💙"];
+  const HI=["Ton compte est enregistré : bienvenue dans la famille IKOIZANA, {n} ! 🙌","Voasoratra ny kaontinao: tonga soa ao amin’ny fianakavian’i IKOIZANA, {n}! 🙌","你的账号已注册：欢迎加入 IKOIZANA 大家庭，{n}！🙌","Your account is registered: welcome to the IKOIZANA family, {n}! 🙌"];
+
+  let PIC="",NAME="",ACCU=null,LASTR=0,TI=null,CUR=null,OPENS=0;const LAST={};
+  const clean=s=>String(s||"").replace(/[<>&"]/g,"");
+  const fbOK=()=>CONF.facebook&&CONF.facebook!=="#";
+  const fill=(s,v)=>s.replace(/\{(\w)\}/g,(_,k)=>v[k]==null?"":v[k]);
+
+  /* photo + nom du compte Google (ou e-mail) */
+  function who(u){
+    ACCU=u||null;const m=(u&&u.user_metadata)||{},p=m.avatar_url||m.picture||"";
+    PIC=/^https:\/\/[^"')\s]+$/.test(p)?p:"";
+    NAME=u?clean(String(m.full_name||m.name||m.user_name||(u.email||"").split("@")[0]||"")).trim().split(/\s+/)[0].slice(0,14):"";
+  }
+  const init=()=>IkoAuth.surChangement(who);
+  if(window.IkoAuth)init();else window.addEventListener("ikoauth-ready",init,{once:true});
+
+  /* le cerveau : lit la situation réelle du joueur dans la ligue */
+  function state(){
+    const rk=RK.slice().sort((a,b)=>b.xp-a.xp),i=rk.findIndex(x=>x.me),you=rk[i],ah=i>0?rk[i-1]:rk[1];
+    const g=i>0?ah.xp-you.xp:you.xp-ah.xp,r=i+1;let k;
+    if(i===0)k="lead";else if(!you.xp)k="start";else if(i<3)k="podium";
+    else if(LASTR&&r<LASTR)k="up";else if(LASTR&&r>LASTR)k="down";else k=g<=40?"close":"hold";
+    return{k,r,t:rk.length,g,x:clean(ah.n),d:LASTR?Math.abs(LASTR-r):0};
+  }
+  function say(s){
+    const L=MSG[s.k],j=((LAST[s.k]==null?-1:LAST[s.k])+1)%L.length;LAST[s.k]=j;   /* jamais deux fois la même phrase de suite */
+    const pool=[KEEP];if(fbOK())pool.push(FB);if(ACCU)pool.push(HI);
+    const end=pool[OPENS%pool.length],v=Object.assign({n:NAME||PN||T4("champion","mpilalao","玩家","champ")},s);
+    mSay(()=>fill(T4(...L[j]),v)+" "+fill(T4(...end),v));
+    LASTR=s.r;
+  }
+
+  /* ta photo Google sur TA ligne du classement */
+  function paintMe(){
+    const row=$("rk")&&$("rk").querySelector(".rk.me");if(!row)return;
+    const a=row.querySelector(".av"),n=row.querySelector(".nm");
+    if(PIC&&a){a.style.backgroundImage='url("'+PIC+'")';a.style.backgroundSize="cover";a.style.backgroundPosition="center";a.style.backgroundColor="#0b2a66"}
+    if(NAME&&n)n.textContent=NAME;
+  }
+
+  const _mRank=mRank;
+  mRank=function(){
+    _mRank();const rk=$("rk");if(!rk)return;
+    OPENS++;new MutationObserver(paintMe).observe(rk,{childList:true});paintMe();
+    CUR=state();say(CUR);
+    MB.insertAdjacentHTML("beforeend",'<p class="fb" id="rkfb"></p>');
+    mBtns([
+      ['<i class="fa-solid fa-link"></i>'+T4("Garder le lien","Tehirizo ny rohy","收藏链接","Keep the link"),async()=>{
+        const url=location.origin+location.pathname,f=$("rkfb");
+        try{if(navigator.share)await navigator.share({title:"IKOIZANA",url});else{await navigator.clipboard.writeText(url);
+          if(f)f.textContent=T4("Lien copié ✔ Garde-le pour suivre le classement.","Voadika ny rohy ✔ Tehirizo mba hanaraka ny laharana.","链接已复制 ✔ 留着它来关注排名。","Link copied ✔ Keep it to follow the ranking.")}}catch(e){}},"btn yes"],
+      ['<i class="fa-brands fa-facebook-f"></i>'+T4("Suivre la page Facebook","Araho ny pejy Facebook","关注 Facebook 主页","Follow our Facebook page"),CONF.facebook,"btn"]
+    ],true);
+    /* en direct : KOTO réagit dès que ton rang change */
+    clearInterval(TI);TI=setInterval(()=>{
+      if(!$("rk")||!M.classList.contains("on")){clearInterval(TI);return}
+      const s=state();if(s.r!==CUR.r){CUR=s;say(s)}
+    },3500);
+  };
+  ACT.compet=mRank;
 })();
