@@ -1,3 +1,4 @@
+ 
 // ============================================================
 // auth.js — Authentification réelle IKOIZANA (Supabase Auth + table profiles)
 // Chargé avec : <script type="module" src="auth.js"></script>
@@ -56,7 +57,7 @@ const IkoAuth = {
     const d = ouvert(await supabase.auth.signUp({
       email, password: motDePasse,
       options: {
-        data: { name: nom, xp_demo: Math.max(0, Math.floor(xpDemo)) },
+        data: { name: nom },
         emailRedirectTo: window.location.origin
       }
     }));
@@ -74,7 +75,6 @@ const IkoAuth = {
   connecterGoogle: (xpDemo = 0) => NAVIGATEUR_INTEGRE
     ? Promise.resolve({ ok: false, error: "Pour te connecter avec Google, ouvre ce site dans Chrome ou Safari (le navigateur intégré de Facebook, WhatsApp ou Messenger ne le permet pas)." })
     : run(async () => {
-    try { localStorage.setItem("iko_xp_demo", String(Math.max(0, Math.floor(xpDemo)))); } catch (_) {}
     ouvert(await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin }
@@ -103,7 +103,16 @@ const IkoAuth = {
     return {};
   }),
 
-  // Classement réel (prénom, photo, XP) — voir multijoueur.sql
+  // Quiz vérifié par le serveur (voir ikoizana-questions-serveur.sql)
+  questions: (cat, lang, n = 8) => run(async () => ({ lignes: ouvert(await supabase.rpc("qz_get", { p_category: cat, p_lang: lang, p_count: n })) })),
+  repondre: (id, choix, temps) => run(async () => {
+    const d = ouvert(await supabase.rpc("qz_answer", { p_id: id, p_choice: choix, p_time: temps }));
+    return { res: Array.isArray(d) ? d[0] : d };
+  }),
+  moitie: (id) => run(async () => ({ cache: ouvert(await supabase.rpc("qz_fifty", { p_id: id })) })),
+  exemple: (cat, lang) => run(async () => ({ ex: ouvert(await supabase.rpc("qz_example", { p_category: cat, p_lang: lang })) })),
+
+  // Classement réel (prénom, photo, XP) — voir ikoizana-supabase-complet.sql
   classement: (n = 30) => run(async () => ({ lignes: ouvert(await supabase.rpc("leaderboard", { top_n: n })) })),
   // Enregistre le nom et la photo du compte dans profiles
   synchroProfil: (nom, photo) => run(async () => {
@@ -119,17 +128,6 @@ const IkoAuth = {
     return { profil: d };
   })
 };
-
-// Après un retour de connexion Google : réclame l'XP de la démo (une seule fois).
-supabase.auth.onAuthStateChange(async (evt, session) => {
-  if (evt !== "SIGNED_IN" || !session) return;
-  let xp = 0;
-  try { xp = parseInt(localStorage.getItem("iko_xp_demo") || "0", 10) || 0; } catch (_) {}
-  if (xp > 0) {
-    await supabase.rpc("claim_demo_xp", { amount: xp });
-    try { localStorage.removeItem("iko_xp_demo"); } catch (_) {}
-  }
-});
 
 window.IkoAuth = IkoAuth;
 export default IkoAuth;
